@@ -1,0 +1,21 @@
+[ADMINS]
+div_1 = 95462513839177728
+div_2 = 243858093186744320
+div_3 = 154428278302703616
+div_4 = 237689514284285953
+div_5 = 173868651106140162
+div_6 = 351815476847837185
+div_7 = 154709859722461184
+div_8 = 172324074163404800
+
+[SERVER]
+server_name     = FroggedTV
+report_channel  = 146335646951276544
+error_channel   = 146335646951276544
+
+[URL]
+api_url = https://grenouilleapi.the-cluster.org
+
+[SYSTEM]
+refresh_time    = 10
+log_level       = DEBUG
