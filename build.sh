@@ -7,6 +7,8 @@ API_KEY="$(cat api_key.txt)"
 
 docker build -t $IMAGE_NAME:$IMAGE_VERSION .
 
+docker rm -f caline
 
-sudo mkdir -p /usr/share/discord-data
-docker run -it --rm -e "http_proxy=http://p-goodway:3128/" -e "https_proxy=http://p-goodway:3128/" $IMAGE_NAME:$IMAGE_VERSION $TOKEN $API_KEY
+docker run -d --restart always --name caline $IMAGE_NAME:$IMAGE_VERSION $TOKEN $API_KEY
+
+docker logs -f caline

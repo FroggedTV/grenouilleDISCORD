@@ -10,11 +10,11 @@ admins              = {
 }
 
 server_name         = 'Home_Dom'
-report_channel      = 425574311638728716
+report_channel      = 'report'
 
 api_url             = 'https://grenouilleapi.the-cluster.org'
 
-refresh_time        = 10
+refresh_time        = 5
 log_level           = 'DEBUG'
 game_list_limit     = 50
 game_list_offset    = 0
