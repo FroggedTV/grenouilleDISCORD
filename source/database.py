@@ -2,7 +2,7 @@ from threading import Lock
 import sqlite3
 import config
 import logging
-from time import time
+from time import time as current_time
 
 LOGGER = logging.getLogger(__name__)
 
@@ -10,9 +10,9 @@ LOGGER = logging.getLogger(__name__)
 class Database(object):
     def __init__(self):
         LOGGER.debug("Initializing Database object")
-        self._database_path = config.database_path
+        self.database_path = config.database_path
         self.lock = Lock()
-        self.connection = sqlite3.connect(self._database_path,
+        self.connection = sqlite3.connect(self.database_path,
             check_same_thread=False)
         self.init_table()
 
@@ -33,7 +33,7 @@ class Database(object):
         LOGGER.debug("Inserting alert: "+str(game_id)+" "+status)
         self.lock.acquire()
         c = self.connection.cursor()
-        alert_time = int(time())
+        alert_time = int(current_time())
         c.execute('INSERT INTO alerts VALUES (?, ?, ?)', (game_id, status, alert_time))
         self.connection.commit()
         self.lock.release()

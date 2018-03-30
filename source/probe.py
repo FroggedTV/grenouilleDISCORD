@@ -6,61 +6,66 @@ import config
 import asyncio
 import config
 import discord
+import datetime
 
 LOGGER = logging.getLogger(__name__)
+
 
 async def send_message(client, channel, message):
     await client.send_message(channel, message)
 
 
 class Probe(Thread):
-    def __init__(self, api_key, database):
+    def __init__(self, database, api_handler):
         Thread.__init__(self)
         LOGGER.debug("Initializing Probe thread")
-        self.api_key            = api_key
         self.database           = database
-        self.host               = config.api_url
-        self.refresh_time       = config.refresh_time
-        self.game_list_limit    = config.game_list_limit
-        self.game_list_offset   = config.game_list_offset
+        self.api_handler        = api_handler
         self.client             = None
+        self.refresh_time       = config.refresh_time
         self.channel            = None
-        self.loop               = asyncio.new_event_loop()
 
-    def get_list(self):
-        r = requests.get(self.host + '/api/game/list',
-            headers= {
-                'API_KEY': self.api_key
-            },
-            json={
-                'fields': ['name', 'status', 'bot'],
-                'limit': self.game_list_limit,
-                'offset': self.game_list_offset
-            }
-        )
-        content = r.json()
-        games = content['payload']['games']
-        return games
 
-    def alert_consumer(self, game_id, status):
+    def get_admin(self, match):
+        admin = None
+        match_splitted = match.split("_")
+        try:
+            for div in config.team_tags:
+                for tag in config.team_tags[div]:
+                    if match_splitted[1] == tag or match_splitted[2] == tag:
+                        admin = config.admins[div]
+            if admin:
+                return discord.utils.get(self.client.get_all_members(), server__name=config.server_name, id=admin)
+            else:
+                return None
+        except Exception as e:
+            LOGGER.error("Error in get_admin: "+str(e))
+            return None
+
+
+    def alert_consumer(self, game_id, name, status, bot, password, team1, team2):
+        alert = None
+        admin = self.get_admin(name)
+        mention = ""
+        if admin:
+            mention = admin.mention
+            
+        if status == 'GameStatus.WAITING_FOR_PLAYERS' or status == 'GameStatus.CANCELLED':                
+            alert = "La game `"+name+"` n° `"+str(game_id)+"`  (password `"+password+"`), hosted par l'ami `"+bot+"` vient de passer en statut `"+status+"` "+mention
         if not self.database.is_alert(game_id, status):
-            LOGGER.debug("ALERT FOR GAME "+str(game_id)+" : "+status)
-
-            async def test():
-                await send_message(self.client, self.channel, "ALERT FOR GAME "+str(game_id)+" : "+status)
-
-            self.loop.run_until_complete(test())
-
             self.database.insert_alert(game_id, status)
+            async def task_send_message():
+                await send_message(self.client, self.channel, alert)
+            task = self.client.loop.create_task(task_send_message())
 
     def run(self):
-        try:
-            LOGGER.debug("Starting Probe...")
-            while True:
-                games = self.get_list()
+        LOGGER.debug("Starting Probe...")
+        while True:
+            try:
+                games = self.api_handler.get_games()
                 for game in games:
                     if game['status'] == 'GameStatus.WAITING_FOR_PLAYERS' or game['status'] == 'GameStatus.CANCELLED':
-                        self.alert_consumer(game['id'], game['status'])
-                sleep(int(self.refresh_time))
-        except Exception as e:
-            LOGGER.error("Error in Probe.run: "+str(e))
+                        self.alert_consumer(game['id'], game['name'], game['status'], game['bot'], game['password'], game['team1'], game['team2'])
+            except Exception as e:
+                LOGGER.error("Error in Probe.run: "+str(e))
+            sleep(int(self.refresh_time))
